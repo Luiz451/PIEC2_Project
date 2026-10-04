@@ -1,4 +1,4 @@
-package backend_java;
+package com.sigg.fazendadigital;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
