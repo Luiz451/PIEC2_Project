@@ -1,6 +1,6 @@
 # Plano inicial do CRUD de ordenhas
 
-Este plano detalha a [issue #5](https://github.com/Luiz451/PIEC2_Project/issues/5) para o backend atual. É uma proposta de implementação; nenhum código de ordenhas foi criado ainda.
+Este plano detalha a [issue #5](https://github.com/Luiz451/PIEC2_Project/issues/5). A primeira implementação do CRUD foi iniciada no backend seguindo este contrato.
 
 ## Objetivo
 
@@ -8,9 +8,9 @@ Permitir registrar, consultar, corrigir e excluir a produção de leite de um an
 
 ## Modelo mínimo proposto
 
-Uma `Ordenha` deve ter identificador próprio, referência à fazenda e ao animal, data e hora da coleta, volume em litros e horário de criação/alteração do registro. O volume deve usar `BigDecimal` no Java e tipo decimal no PostgreSQL, com valor maior que zero. A referência ao animal deve existir e pertencer à fazenda informada.
+Uma `Ordenha` deve ter identificador próprio, referência à fazenda e ao animal, data, hora, turno, volume em litros e horário de criação/alteração do registro. O volume deve usar `BigDecimal` no Java e tipo decimal no PostgreSQL, com valor maior que zero. A referência ao animal deve existir e pertencer à fazenda informada.
 
-O turno da ordenha (por exemplo, manhã ou tarde) pode ser necessário para impedir lançamentos duplicados e produzir relatórios. Antes de fixar a restrição de unicidade no banco, é preciso definir se o produto permite mais de uma ordenha do mesmo animal no mesmo turno e como tratar registros feitos offline que chegam depois.
+Regra definida pelo usuário: cada animal pode ter somente uma ordenha por turno em cada data. O turno será recebido como identificador textual para acomodar os horários definidos por cada propriedade, removendo espaços nas pontas e ignorando diferenças entre maiúsculas e minúsculas. A combinação fazenda, animal, data e turno deve ser única. A restrição existe também no banco para proteger contra gravações simultâneas e sincronização offline futura.
 
 ## API proposta
 
@@ -24,14 +24,14 @@ Seguindo a versão e o estilo da rota de animais, criar:
 
 Usar DTOs de entrada e saída, validação de campos e respostas claras para entrada inválida (`400`), animal ou ordenha inexistente (`404`) e duplicidade conforme a regra definida (`409`). O identificador da fazenda recebido na requisição não deve substituir uma futura verificação de acesso por usuário; a autorização depende da [issue #12](https://github.com/Luiz451/PIEC2_Project/issues/12).
 
+Os endpoints de listagem, consulta, edição e remoção recebem `fazendaId` como parâmetro de consulta. A listagem aceita também `animalId`, `dataInicial`, `dataFinal`, `page` e `size` (padrão de 20 e limite de 100). O corpo de criação e edição contém `fazendaId`, `animalId`, `dataOrdenha` (`AAAA-MM-DD`), `horaOrdenha` (`HH:mm:ss`), `turno` e `volumeLitros`.
+
 ## Sequência de implementação
 
-1. Definir a regra de negócio de duplicidade e o contrato de identificação da fazenda. Especificar também como correções e exclusões afetarão indicadores históricos.
-2. Preparar schema e migration da tabela de ordenhas, com chaves para animal e fazenda, índices para as consultas por animal e data e restrições coerentes com as regras definidas. Essa etapa depende da base de persistência da [issue #2](https://github.com/Luiz451/PIEC2_Project/issues/2).
-3. Criar entidade, repositório e serviço de ordenhas. Validar volume, data, existência do animal e pertencimento à fazenda antes de gravar.
-4. Criar controller e DTOs. Manter a lógica de negócio no serviço e não aceitar entidades JPA diretamente como contrato público da API.
-5. Testar cadastro, leitura, atualização, exclusão, filtros e erros de validação. Incluir teste de duplicidade depois que a regra estiver definida e teste de persistência com PostgreSQL quando o ambiente da [issue #4](https://github.com/Luiz451/PIEC2_Project/issues/4) estiver disponível.
-6. Integrar os dados aos indicadores da [issue #6](https://github.com/Luiz451/PIEC2_Project/issues/6) em etapa própria. Definir a sincronização offline junto à [issue #11](https://github.com/Luiz451/PIEC2_Project/issues/11).
+1. Regra definida: uma ordenha por animal, fazenda, data e turno. A autorização por usuário depende da [issue #12](https://github.com/Luiz451/PIEC2_Project/issues/12).
+2. Migration inicial, entidade, repositório, serviço, DTOs, controller paginado e respostas de erro foram criados. A migration inicia a persistência de animais e ordenhas prevista na [issue #2](https://github.com/Luiz451/PIEC2_Project/issues/2).
+3. Validar a implementação com PostgreSQL e ampliar a cobertura para leitura, atualização, exclusão, filtros e restrição de unicidade no banco quando o ambiente da [issue #4](https://github.com/Luiz451/PIEC2_Project/issues/4) estiver disponível.
+4. Integrar os dados aos indicadores da [issue #6](https://github.com/Luiz451/PIEC2_Project/issues/6) em etapa própria e definir a sincronização offline junto à [issue #11](https://github.com/Luiz451/PIEC2_Project/issues/11).
 
 ## Critérios de aceite propostos
 
@@ -44,9 +44,8 @@ Usar DTOs de entrada e saída, validação de campos e respostas claras para ent
 
 ## Definições pendentes
 
-1. Uma ordenha corresponde a **um animal por turno**, ou pode haver múltiplas coletas do mesmo animal no mesmo turno?
-2. O turno será um campo obrigatório, derivado do horário ou dispensável? Há horários oficiais da fazenda?
-3. A exclusão deve apagar o registro ou preservá-lo para auditoria com cancelamento lógico?
-4. O primeiro recorte precisa registrar apenas volume, ou também observações e destino do leite?
+1. O turno é um identificador textual informado pela propriedade; padronização de horários e nomes de turnos poderá ser configurada em outra etapa.
+2. A exclusão será física nesta primeira versão. Auditoria e cancelamento lógico podem ser adicionados quando houver requisito.
+3. O primeiro recorte guarda o volume. Observações e destino do leite ficam fora desta implementação inicial.
 
-Essas decisões afetam o schema, a validação de duplicidade e o comportamento do modo offline. Devem ser confirmadas antes da implementação da migration e das rotas.
+O contrato inicial já usa esses critérios. A configuração de turnos por propriedade, auditoria e integração com sincronização offline ficam para etapas posteriores, caso os requisitos sejam confirmados.

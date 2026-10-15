@@ -4,11 +4,11 @@ Levantamento feito em 15 de outubro de 2026 a partir do código deste repositór
 
 ## Código disponível
 
-O repositório contém apenas `backend-java/`. O `pom.xml` declara Java 21, Spring Boot 4.1.1, Spring Web MVC, Spring Data JPA, Spring Security e o driver PostgreSQL. Há uma entidade `Animal`, um repositório JPA, um serviço e um controller com rotas previstas em `/api/v1/animals` para cadastro, listagem, consulta, atualização e remoção.
+O repositório contém `backend-java/`. O `pom.xml` declara Java 21, Spring Boot 4.1.1, Spring Web MVC, Spring Data JPA, Spring Security, validação Bean Validation, Flyway e o driver PostgreSQL. Há uma entidade `Animal`, um repositório JPA, um serviço e um controller com rotas previstas em `/api/v1/animals`. Também foi iniciada a implementação do CRUD de ordenhas em `/api/v1/ordenhas`, com migration inicial e validação da regra de uma ordenha por animal, fazenda, data e turno.
 
-Essa estrutura ainda não forma um fluxo funcional completo: `AnimalController` declara `AnimalService`, mas não o inicializa; `application.yaml` contém apenas o nome da aplicação; não há configuração de banco, migrations ou configuração própria de autenticação. O teste existente verifica somente o carregamento do contexto do Spring. Não foram encontrados frontend, módulo financeiro, módulo de ordenhas nem código de visão computacional ou IA.
+O CRUD de animais ainda tem uma dependência `AnimalService` que não é inicializada no controller. O CRUD de ordenhas depende de PostgreSQL para execução normal, com conexão configurada em `application.yaml`; o contexto de teste usa H2 e aplica a migration. Não foram encontrados frontend, módulo financeiro ou código de visão computacional e IA. A autenticação própria ainda está pendente; Spring Security mantém sua configuração padrão de desenvolvimento.
 
-Não foi feita execução funcional da aplicação neste levantamento. A presença das classes e rotas indica trabalho iniciado, não uma funcionalidade validada.
+Verificação em 15 de outubro de 2026: `mvn test` passou com quatro testes, incluindo inicialização do contexto e três testes unitários para cadastro, duplicidade e vínculo do animal à fazenda. Os testes usam H2 e mocks; não substituem validação de integração em PostgreSQL nem teste HTTP ponta a ponta.
 
 ## Prioridade de produto
 
