@@ -9,9 +9,12 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.Optional;
+import java.util.List;
 import java.util.UUID;
 
 public interface OrdenhaRepository extends JpaRepository<Ordenha, UUID> {
+
+    List<Ordenha> findByAnimalIdAndDataOrdenhaBetween(UUID animalId, LocalDate inicio, LocalDate fim);
 
     boolean existsByFazendaIdAndAnimalIdAndDataOrdenhaAndTurno(
             UUID fazendaId, UUID animalId, LocalDate dataOrdenha, String turno);

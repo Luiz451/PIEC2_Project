@@ -14,6 +14,9 @@ public record OrdenhaResponse(
         LocalTime horaOrdenha,
         String turno,
         BigDecimal volumeLitros,
+        BigDecimal temperatura,
+        UUID operadorId,
+        String observacao,
         Instant criadoEm,
         Instant atualizadoEm
 ) {

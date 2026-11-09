@@ -8,7 +8,7 @@ O repositório contém `backend-java/`. O `pom.xml` declara Java 21, Spring Boot
 
 O CRUD de animais ainda tem uma dependência `AnimalService` que não é inicializada no controller. O CRUD de ordenhas depende de PostgreSQL para execução normal, com conexão configurada em `application.yaml`; o contexto de teste usa H2 e aplica a migration. Não foram encontrados frontend, módulo financeiro ou código de visão computacional e IA. A autenticação própria ainda está pendente; Spring Security mantém sua configuração padrão de desenvolvimento.
 
-Verificação em 15 de outubro de 2026: `mvn test` passou com quatro testes, incluindo inicialização do contexto e três testes unitários para cadastro, duplicidade e vínculo do animal à fazenda. Os testes usam H2 e mocks; não substituem validação de integração em PostgreSQL nem teste HTTP ponta a ponta.
+Verificação após integrar a `main` em 9 de novembro de 2026: `mvn test` passou com quatro testes, incluindo inicialização do contexto e três testes unitários para cadastro, duplicidade e vínculo do animal à fazenda. Os testes usam H2 e mocks; não substituem validação de integração em PostgreSQL nem teste HTTP ponta a ponta. A migration V1 da `main` foi preservada, e a adaptação da tabela de ordenhas está na V2.
 
 ## Prioridade de produto
 

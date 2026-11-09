@@ -10,7 +10,7 @@ Permitir registrar, consultar, corrigir e excluir a produção de leite de um an
 
 Uma `Ordenha` deve ter identificador próprio, referência à fazenda e ao animal, data, hora, turno, volume em litros e horário de criação/alteração do registro. O volume deve usar `BigDecimal` no Java e tipo decimal no PostgreSQL, com valor maior que zero. A referência ao animal deve existir e pertencer à fazenda informada.
 
-Regra definida pelo usuário: cada animal pode ter somente uma ordenha por turno em cada data. O turno será recebido como identificador textual para acomodar os horários definidos por cada propriedade, removendo espaços nas pontas e ignorando diferenças entre maiúsculas e minúsculas. A combinação fazenda, animal, data e turno deve ser única. A restrição existe também no banco para proteger contra gravações simultâneas e sincronização offline futura.
+Regra definida pelo usuário: cada animal pode ter somente uma ordenha por turno em cada data. A implementação integrada à `main` aceita os turnos manhã e tarde; remove espaços nas pontas e normaliza acentos e maiúsculas. A combinação fazenda, animal, data e turno é única. A restrição existe também no banco para proteger contra gravações simultâneas e sincronização offline futura.
 
 ## API proposta
 
@@ -44,7 +44,7 @@ Os endpoints de listagem, consulta, edição e remoção recebem `fazendaId` com
 
 ## Definições pendentes
 
-1. O turno é um identificador textual informado pela propriedade; padronização de horários e nomes de turnos poderá ser configurada em outra etapa.
+1. O turno aceita manhã e tarde, conforme o contrato que chegou à `main`; configuração de horários por propriedade poderá ser adicionada em outra etapa.
 2. A exclusão será física nesta primeira versão. Auditoria e cancelamento lógico podem ser adicionados quando houver requisito.
 3. O primeiro recorte guarda o volume. Observações e destino do leite ficam fora desta implementação inicial.
 

@@ -43,13 +43,13 @@ class OrdenhaServiceTest {
         UUID animalId = UUID.randomUUID();
         when(animalRepository.findById(animalId)).thenReturn(Optional.of(animal(animalId, fazendaId)));
         when(ordenhaRepository.existsByFazendaIdAndAnimalIdAndDataOrdenhaAndTurno(
-                fazendaId, animalId, LocalDate.of(2026, 10, 15), "MANHÃ")).thenReturn(false);
+                fazendaId, animalId, LocalDate.of(2026, 10, 15), "MANHA")).thenReturn(false);
         when(ordenhaRepository.saveAndFlush(any(Ordenha.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         OrdenhaResponse response = ordenhaService.cadastrar(request(fazendaId, animalId, " manhã "));
 
-        assertEquals("MANHÃ", response.turno());
+        assertEquals("MANHA", response.turno());
         assertEquals(new BigDecimal("12.500"), response.volumeLitros());
         verify(ordenhaRepository).saveAndFlush(any(Ordenha.class));
     }
@@ -90,6 +90,6 @@ class OrdenhaServiceTest {
 
     private OrdenhaRequest request(UUID fazendaId, UUID animalId, String turno) {
         return new OrdenhaRequest(fazendaId, animalId, LocalDate.of(2026, 10, 15),
-                LocalTime.of(6, 30), turno, new BigDecimal("12.500"));
+                LocalTime.of(6, 30), turno, new BigDecimal("12.500"), null, null, null);
     }
 }

@@ -18,6 +18,9 @@ public record OrdenhaRequest(
         @NotNull LocalTime horaOrdenha,
         @NotBlank @Size(max = 40) String turno,
         @NotNull @DecimalMin(value = "0", inclusive = false) @Digits(integer = 7, fraction = 3)
-        BigDecimal volumeLitros
+        BigDecimal volumeLitros,
+        @Digits(integer = 3, fraction = 1) BigDecimal temperatura,
+        UUID operadorId,
+        String observacao
 ) {
 }

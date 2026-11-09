@@ -51,6 +51,15 @@ public class Ordenha {
     @Column(name = "volume_litros", nullable = false, precision = 10, scale = 3)
     private BigDecimal volumeLitros;
 
+    @Column(precision = 4, scale = 1)
+    private BigDecimal temperatura;
+
+    @Column(name = "operador_id")
+    private UUID operadorId;
+
+    @Column(columnDefinition = "TEXT")
+    private String observacao;
+
     @Column(name = "criado_em", nullable = false, updatable = false)
     private Instant criadoEm;
 
