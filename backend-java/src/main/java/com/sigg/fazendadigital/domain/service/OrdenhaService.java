@@ -1,98 +1,144 @@
 package com.sigg.fazendadigital.domain.service;
 
+import com.sigg.fazendadigital.domain.entities.Animal;
 import com.sigg.fazendadigital.domain.entities.Ordenha;
+import com.sigg.fazendadigital.domain.interface_adapters.api.dto.OrdenhaRequest;
+import com.sigg.fazendadigital.domain.interface_adapters.api.dto.OrdenhaResponse;
+import com.sigg.fazendadigital.infraestructure.persistence.AnimalRepository;
 import com.sigg.fazendadigital.infraestructure.persistence.OrdenhaRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.text.Normalizer;
+import java.util.Locale;
 import java.util.List;
 import java.util.UUID;
 
-@Slf4j
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class OrdenhaService {
 
     private final OrdenhaRepository ordenhaRepository;
+    private final AnimalRepository animalRepository;
 
     @Transactional
-    public Ordenha registrarOrdenha(Ordenha ordenha) {
-        if (!"manha".equalsIgnoreCase(ordenha.getTurno()) && !"tarde".equalsIgnoreCase(ordenha.getTurno())) {
-            throw new IllegalArgumentException("O turno deve ser estritamente 'manha' ou 'tarde'.");
-        }
+    public OrdenhaResponse cadastrar(OrdenhaRequest request) {
+        validarAnimalDaFazenda(request.animalId(), request.fazendaId());
+        validarDuplicidade(request, null);
 
-        boolean duplicata = ordenhaRepository.existsByAnimalIdAndDataAndTurno(
-                ordenha.getAnimal().getId(),
-                ordenha.getData(),
-                ordenha.getTurno()
-        );
-
-        if (duplicata) {
-            throw new IllegalStateException(
-                    String.format("Já existe uma ordenha registada para o animal no turno da %s na data %s.",
-                            ordenha.getTurno(), ordenha.getData())
-            );
-        }
-
+        Ordenha ordenha = new Ordenha();
+        aplicarDados(ordenha, request);
         verificarAlertaDeVariacao(ordenha);
-
-        return ordenhaRepository.save(ordenha);
+        return paraResponse(salvar(ordenha));
     }
 
-    public List<Ordenha> listarTodas() {
-        return ordenhaRepository.findAll();
+    @Transactional(readOnly = true)
+    public Page<OrdenhaResponse> listar(UUID fazendaId, UUID animalId, LocalDate dataInicial,
+                                       LocalDate dataFinal, Pageable pageable) {
+        if (dataInicial != null && dataFinal != null && dataInicial.isAfter(dataFinal)) {
+            throw new IllegalArgumentException("A data inicial deve ser anterior ou igual à data final.");
+        }
+        return ordenhaRepository.buscarPorFiltros(fazendaId, animalId, dataInicial, dataFinal, pageable)
+                .map(this::paraResponse);
     }
 
-    public List<Ordenha> listarPorAnimal(UUID animalId) {
-        return ordenhaRepository.findByAnimalId(animalId);
-    }
-
-    public Ordenha buscarPorId(UUID id) {
-        return ordenhaRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Registo de ordenha não encontrado."));
+    @Transactional(readOnly = true)
+    public OrdenhaResponse buscar(UUID fazendaId, UUID id) {
+        return paraResponse(buscarEntidade(fazendaId, id));
     }
 
     @Transactional
-    public void remover(UUID id) {
-        if (!ordenhaRepository.existsById(id)) {
-            throw new IllegalArgumentException("Registo de ordenha inexistente.");
-        }
-        ordenhaRepository.deleteById(id);
+    public OrdenhaResponse atualizar(UUID fazendaId, UUID id, OrdenhaRequest request) {
+        Ordenha ordenha = buscarEntidade(fazendaId, id);
+        validarAnimalDaFazenda(request.animalId(), request.fazendaId());
+        validarDuplicidade(request, id);
+        aplicarDados(ordenha, request);
+        return paraResponse(salvar(ordenha));
     }
 
-    private void verificarAlertaDeVariacao(Ordenha novaOrdenha) {
-        try {
-            List<Ordenha> historico = ordenhaRepository.findByAnimalId(novaOrdenha.getAnimal().getId());
+    @Transactional
+    public void remover(UUID fazendaId, UUID id) {
+        ordenhaRepository.delete(buscarEntidade(fazendaId, id));
+    }
 
-            LocalDate dataLimite = novaOrdenha.getData().minusDays(7);
-
-            double somaLitros = historico.stream()
-                    .filter(o -> o.getData().isAfter(dataLimite) && o.getData().isBefore(novaOrdenha.getData()))
-                    .mapToDouble(o -> o.getLitros().doubleValue())
-                    .sum();
-
-            long qtdRegistos = historico.stream()
-                    .filter(o -> o.getData().isAfter(dataLimite) && o.getData().isBefore(novaOrdenha.getData()))
-                    .count();
-
-            if (qtdRegistos > 0) {
-                double media = somaLitros / qtdRegistos;
-                double valorAtual = novaOrdenha.getLitros().doubleValue();
-
-                double variacao = Math.abs((valorAtual - media) / media) * 100;
-
-                if (variacao > 30.0) {
-                    log.warn("ALERTA DE PRODUÇÃO: O animal {} apresentou uma variação de {}.2f%% em relação à média dos últimos 7 dias.",
-                            novaOrdenha.getAnimal().getId(), variacao);
-                }
-            }
-        } catch (Exception e) {
-            log.error("Falha ao calcular a variação de produção para o alerta", e);
+    private void validarAnimalDaFazenda(UUID animalId, UUID fazendaId) {
+        Animal animal = animalRepository.findById(animalId)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Animal não encontrado."));
+        if (!fazendaId.equals(animal.getFazendaId())) {
+            throw new IllegalArgumentException("O animal informado não pertence à fazenda.");
         }
+    }
+
+    private void validarDuplicidade(OrdenhaRequest request, UUID idAtual) {
+        String turno = normalizarTurno(request.turno());
+        boolean duplicada = idAtual == null
+                ? ordenhaRepository.existsByFazendaIdAndAnimalIdAndDataOrdenhaAndTurno(
+                        request.fazendaId(), request.animalId(), request.dataOrdenha(), turno)
+                : ordenhaRepository.existsByFazendaIdAndAnimalIdAndDataOrdenhaAndTurnoAndIdNot(
+                        request.fazendaId(), request.animalId(), request.dataOrdenha(), turno, idAtual);
+        if (duplicada) {
+            throw new OrdenhaDuplicadaException();
+        }
+    }
+
+    private Ordenha buscarEntidade(UUID fazendaId, UUID id) {
+        return ordenhaRepository.findByIdAndFazendaId(id, fazendaId)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Ordenha não encontrada nesta fazenda."));
+    }
+
+    private void aplicarDados(Ordenha ordenha, OrdenhaRequest request) {
+        ordenha.setFazendaId(request.fazendaId());
+        ordenha.setAnimalId(request.animalId());
+        ordenha.setDataOrdenha(request.dataOrdenha());
+        ordenha.setHoraOrdenha(request.horaOrdenha());
+        ordenha.setTurno(normalizarTurno(request.turno()));
+        ordenha.setVolumeLitros(request.volumeLitros());
+        ordenha.setTemperatura(request.temperatura());
+        ordenha.setOperadorId(request.operadorId());
+        ordenha.setObservacao(request.observacao());
+    }
+
+    private Ordenha salvar(Ordenha ordenha) {
+        return ordenhaRepository.saveAndFlush(ordenha);
+    }
+
+    private String normalizarTurno(String turno) {
+        String normalizado = Normalizer.normalize(turno.trim(), Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "").toUpperCase(Locale.ROOT);
+        if (!normalizado.equals("MANHA") && !normalizado.equals("TARDE")) {
+            throw new IllegalArgumentException("O turno deve ser manhã ou tarde.");
+        }
+        return normalizado;
+    }
+
+    private void verificarAlertaDeVariacao(Ordenha ordenha) {
+        List<Ordenha> historico = ordenhaRepository.findByAnimalIdAndDataOrdenhaBetween(
+                ordenha.getAnimalId(), ordenha.getDataOrdenha().minusDays(7),
+                ordenha.getDataOrdenha().minusDays(1));
+        if (historico.isEmpty()) {
+            return;
+        }
+        double media = historico.stream().mapToDouble(o -> o.getVolumeLitros().doubleValue())
+                .average().orElse(0);
+        if (media > 0) {
+            double variacao = Math.abs((ordenha.getVolumeLitros().doubleValue() - media) / media) * 100;
+            if (variacao > 30) {
+                log.warn("ALERTA DE PRODUÇÃO: animal {} variou {}% em relação à média dos últimos 7 dias.",
+                        ordenha.getAnimalId(), String.format(Locale.ROOT, "%.2f", variacao));
+            }
+        }
+    }
+
+    private OrdenhaResponse paraResponse(Ordenha ordenha) {
+        return new OrdenhaResponse(ordenha.getId(), ordenha.getFazendaId(), ordenha.getAnimalId(),
+                ordenha.getDataOrdenha(), ordenha.getHoraOrdenha(), ordenha.getTurno(),
+                ordenha.getVolumeLitros(), ordenha.getTemperatura(), ordenha.getOperadorId(),
+                ordenha.getObservacao(), ordenha.getCriadoEm(), ordenha.getAtualizadoEm());
     }
 }
