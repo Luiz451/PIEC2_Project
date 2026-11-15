@@ -23,13 +23,15 @@ public class AnimalService {
     }
 
     public Animal buscarPorID(UUID id) {
-        return animalRepository.findById(id).orElseThrow(() -> new RuntimeException("Animal não encontrado"));
+        return animalRepository.findById(id).orElseThrow(() -> new RecursoNaoEncontradoException("Animal não encontrado"));
     }
 
     public Animal atualizarAnimal(UUID id, Animal animalAtualizado) {
         Animal animal = buscarPorID(id);
+        animal.setFazendaId(animalAtualizado.getFazendaId());
         animal.setNome(animalAtualizado.getNome());
         animal.setBrinco(animalAtualizado.getBrinco());
+        animal.setRaca(animalAtualizado.getRaca());
         animal.setDataNascimento(animalAtualizado.getDataNascimento());
         animal.setFotoUrl(animalAtualizado.getFotoUrl());
         animal.setSexo(animalAtualizado.getSexo());

@@ -25,12 +25,12 @@ public interface OrdenhaRepository extends JpaRepository<Ordenha, UUID> {
     Optional<Ordenha> findByIdAndFazendaId(UUID id, UUID fazendaId);
 
     @Query("""
-            SELECT o FROM Ordenha o
-            WHERE o.fazendaId = :fazendaId
-              AND (:animalId IS NULL OR o.animalId = :animalId)
-              AND (:dataInicial IS NULL OR o.dataOrdenha >= :dataInicial)
-              AND (:dataFinal IS NULL OR o.dataOrdenha <= :dataFinal)
-            """)
+        SELECT o FROM Ordenha o
+        WHERE o.fazendaId = :fazendaId
+          AND (CAST(:animalId AS uuid) IS NULL OR o.animalId = :animalId)
+          AND (CAST(:dataInicial AS LocalDate) IS NULL OR o.dataOrdenha >= :dataInicial)
+          AND (CAST(:dataFinal AS LocalDate) IS NULL OR o.dataOrdenha <= :dataFinal)
+        """)
     Page<Ordenha> buscarPorFiltros(
             @Param("fazendaId") UUID fazendaId,
             @Param("animalId") UUID animalId,
