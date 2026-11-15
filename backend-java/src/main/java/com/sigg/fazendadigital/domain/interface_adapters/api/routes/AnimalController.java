@@ -15,7 +15,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class AnimalController {
 
-    private AnimalService animalService;
+    private final AnimalService animalService;
 
     @PostMapping
     public ResponseEntity<Animal> cadastrar(@RequestBody Animal animal) {
